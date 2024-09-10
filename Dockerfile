@@ -18,4 +18,4 @@ RUN apt-get update && apt-get install -y \
 EXPOSE 5000
 
 # Lệnh để chạy ứng dụng Flask
-CMD ["gunicorn", "--workers", "4", "--bind", "0.0.0.0:5000", "main:app"]
+CMD ["gunicorn", "--workers", "2", "--bind", "0.0.0.0:5000", "main:app"]
