@@ -8,13 +8,14 @@ from ultralytics import YOLO
 from tensorflow.keras.applications import ResNet50
 from tensorflow.keras.applications.resnet50 import preprocess_input
 from tensorflow.keras.preprocessing import image
+from tensorflow.keras.models import load_model
 from scipy.spatial.distance import cdist
 import base64
 import os
 from dotenv import load_dotenv
 
 # Khởi tạo mô hình ResNet50
-model2 = ResNet50(weights='imagenet', include_top=False, pooling='avg')
+model2 = load_model('weight/resnet50_model.keras')
 
 def extract_features(img, xyxy):
     features = []
