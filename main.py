@@ -2,16 +2,15 @@ from flask import Flask, request, jsonify, send_file, url_for
 from flask_cors import CORS
 from pymongo import MongoClient
 from io import BytesIO
-from PIL import Image
-import cv2
+from PIL import Image, ImageDraw
 import numpy as np
 from ultralytics import YOLO
-import os
 from tensorflow.keras.applications import ResNet50
 from tensorflow.keras.applications.resnet50 import preprocess_input
 from tensorflow.keras.preprocessing import image
 from scipy.spatial.distance import cdist
 import base64
+import os
 from dotenv import load_dotenv
 
 # Khởi tạo mô hình ResNet50
@@ -67,9 +66,6 @@ def predict():
     image_file = request.files['image'].read()  # Lấy ảnh từ request
     img = Image.open(BytesIO(image_file))  # Chuyển đổi ảnh thành đối tượng PIL
 
-    # ---convert PIL image to OpenCV format (numpy array)---
-    img_cv2 = np.array(img.convert('RGB'))  # Chuyển từ PIL sang numpy (OpenCV dùng RGB)
-
     # ---process image using YOLO model---
     results = model(img)  # Sử dụng YOLO model để xử lý ảnh
     img_features = extract_features(img, results[0].boxes.xyxy)
@@ -117,14 +113,12 @@ def predict():
         for box in result.boxes.xyxy:  # Lấy tọa độ xyxy của các bounding box
             x1, y1, x2, y2 = map(int, box)  # Chuyển tọa độ sang integer
             # Vẽ bounding box lên ảnh
-            cv2.rectangle(img_cv2, (x1, y1), (x2, y2), (0, 255, 0), 2)  # Vẽ ô vuông màu xanh lá (0, 255, 0)
+            draw = ImageDraw.Draw(img)  # Khởi tạo đối tượng vẽ của PIL
+            draw.rectangle([x1, y1, x2, y2], outline="green", width=3)  # Vẽ hình chữ nhật xanh
 
-    # ---convert the processed image (with bounding boxes) back to PIL---
-    processed_image_pil = Image.fromarray(img_cv2)  # Chuyển lại sang PIL để trả về
-
-    # ---save the processed image to a byte array---
+    # ---convert the processed image (with bounding boxes) back to byte array---
     img_byte_arr = BytesIO()
-    processed_image_pil.save(img_byte_arr, format='PNG')  # Lưu ảnh đã xử lý vào byte array
+    img.save(img_byte_arr, format='PNG')  # Lưu ảnh đã xử lý vào byte array
     img_byte_arr.seek(0)
     img_base64 = base64.b64encode(img_byte_arr.getvalue()).decode('utf-8')
 
@@ -137,12 +131,11 @@ def predict():
         'processed_image': f"data:image/png;base64,{img_base64}"  # Hình ảnh dưới dạng base64
     }
     return jsonify(response_data)
-    # return send_file(img_byte_arr, mimetype='image/png')
 
 @app.route('/images/<filename>')
 def get_image(filename):
     # Trả về ảnh từ server
-    return send_file(f'image\\product_image\\{filename}', mimetype='image/png')
+    return send_file(f'image/product_image/{filename}', mimetype='image/png')
 
 
 if __name__ == '__main__':
