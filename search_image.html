@@ -1,0 +1,151 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Search Image</title>
+    <link rel="stylesheet" />
+    <style>
+      /* Áp dụng phông chữ Montserrat cho toàn bộ trang */
+      body {
+        font-family: "Montserrat", sans-serif;
+      }
+      #image {
+        display: none;
+      }
+
+      /* Nút tùy chỉnh */
+      .custom-file-upload {
+        border: 1px solid #ccc;
+        display: inline-block;
+        padding: 6px 12px;
+        cursor: pointer;
+        background-color: #f8f8f8;
+        border-radius: 4px;
+        color: #333;
+        font-family: "Montserrat", sans-serif;
+        font-size: 16px;
+      }
+
+      .custom-file-upload:hover {
+        background-color: #e0e0e0;
+      }
+
+      /* Style for file name display */
+      .file-name {
+        margin-top: 10px;
+        font-size: 14px;
+      }
+    </style>
+  </head>
+  <body>
+    <div style="margin: 35px">
+      <h1>Tìm kiếm bằng ảnh</h1>
+      <form id="upload-form" enctype="multipart/form-data">
+        <label for="image" class="custom-file-upload"> Chọn ảnh </label>
+        <input type="file" id="image" name="image" accept="image/*" required />
+        <button type="submit" class="custom-file-upload">Tìm kiếm</button>
+      </form>
+      <div id="file-info" class="file-name"></div>
+      <img id="uploaded-image" alt="Uploaded Image" style="display: none" />
+      <img
+        id="processed-image"
+        src=""
+        alt="Processed Image"
+        style="display: none; margin-top: 10px"
+      />
+      <h2>Sản phẩm</h2>
+      <div id="result-images"></div>
+    </div>
+    <script>
+      document
+        .getElementById("upload-form")
+        .addEventListener("submit", async function (event) {
+          event.preventDefault(); // Prevent the form from submitting the traditional way
+
+          // Create a FormData object
+          const formData = new FormData();
+          const fileInput = document.getElementById("image");
+          formData.append("image", fileInput.files[0]);
+
+          try {
+            // Send the image to the server
+            const response = await fetch("/diabetes/v1/predict", {
+              method: "POST",
+              body: formData,
+            });
+
+            // Check if the response is ok
+            if (!response.ok) {
+              throw new Error("Network response was not ok.");
+            }
+
+            // Parse the JSON response
+            const responseData = await response.json();
+
+            // Extract image URLs and processed image from the response
+            const imageUrls = responseData.images || [];
+            const processedImageBase64 = responseData.processed_image || "";
+
+            // Clear any previous images
+            const resultImagesDiv = document.getElementById("result-images");
+            resultImagesDiv.innerHTML = "";
+
+            // Create <img> elements for each image URL and append them to the result-images div
+            imageUrls.forEach((url) => {
+              const imgElement = document.createElement("img");
+              imgElement.src = url;
+              imgElement.alt = "Processed Image";
+              imgElement.style.width = "300px"; // Style the images as needed
+              imgElement.style.height = "450px";
+              imgElement.style.marginRight = "10px";
+              imgElement.style.marginBottom = "10px";
+
+              resultImagesDiv.appendChild(imgElement);
+            });
+
+            // Set the processed image src and display it
+            const processedImageElement =
+              document.getElementById("processed-image");
+            if (processedImageBase64) {
+              processedImageElement.src = processedImageBase64;
+              processedImageElement.style.display = "block";
+              let uploadedImageElement =
+                document.getElementById("uploaded-image");
+              uploadedImageElement.style.display = "none";
+            } else {
+              processedImageElement.style.display = "none";
+            }
+          } catch (error) {
+            console.error(
+              "There was a problem with the fetch operation:",
+              error
+            );
+          }
+        });
+      document.getElementById("image").addEventListener("change", function () {
+        const fileInfoDiv = document.getElementById("file-info");
+        let uploadedImageElement = document.getElementById("uploaded-image");
+        const file = this.files[0];
+
+        if (file) {
+          console.log(file);
+          fileInfoDiv.textContent = `Tệp đã chọn: ${file.name}`;
+          uploadedImageElement.style.display = "block";
+          uploadedImageElement.style.marginTop = "10px";
+
+          // Create a FileReader to read the file content
+          const reader = new FileReader();
+          reader.onload = function (e) {
+            uploadedImageElement.src = e.target.result;
+            uploadedImageElement.style.display = "block";
+          };
+          reader.readAsDataURL(file); // Read file as a data URL
+        } else {
+          fileInfoDiv.textContent = "Không có tệp nào được chọn";
+          uploadedImageElement.style.display = "none";
+        }
+      });
+    </script>
+  </body>
+</html>
