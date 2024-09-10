@@ -12,6 +12,7 @@ from tensorflow.keras.applications.resnet50 import preprocess_input
 from tensorflow.keras.preprocessing import image
 from scipy.spatial.distance import cdist
 import base64
+from dotenv import load_dotenv
 
 # Khởi tạo mô hình ResNet50
 model2 = ResNet50(weights='imagenet', include_top=False, pooling='avg')
@@ -47,7 +48,9 @@ CORS(app)
 model = YOLO("weight/lastv3.pt")
 
 # ---MongoDB setup---
-mongo_client = MongoClient('mongodb://localhost:27017/')
+load_dotenv()
+db_url = os.getenv("MONGO_URL")
+mongo_client = MongoClient(db_url)
 db = mongo_client['search_image']
 collection = db['image_features']
 
