@@ -114,7 +114,7 @@ def predict():
             x1, y1, x2, y2 = map(int, box)  # Chuyển tọa độ sang integer
             # Vẽ bounding box lên ảnh
             draw = ImageDraw.Draw(img)  # Khởi tạo đối tượng vẽ của PIL
-            draw.rectangle([x1, y1, x2, y2], outline="green", width=3)  # Vẽ hình chữ nhật xanh
+            draw.rectangle([x1, y1, x2, y2], outline="lightgreen", width=3)  # Vẽ hình chữ nhật xanh
 
     # ---convert the processed image (with bounding boxes) back to byte array---
     img_byte_arr = BytesIO()
