@@ -12,9 +12,20 @@ from tensorflow.keras.models import load_model
 from scipy.spatial.distance import cdist
 import base64
 import os
+import argparse
 from dotenv import load_dotenv
 
-# Khởi tạo mô hình ResNet50
+app = Flask(__name__)
+CORS(app)
+
+# ---MongoDB setup---
+load_dotenv()
+db_url = os.getenv("MONGO_URL")
+mongo_client = MongoClient(db_url)
+db = mongo_client['search_image']
+collection = db['image_features']
+
+model = YOLO("weight/lastv3.pt")
 model2 = load_model('weight/resnet50_model.keras')
 
 def extract_features(img, xyxy):
@@ -42,18 +53,6 @@ def extract_features(img, xyxy):
 
     return features
 
-app = Flask(__name__)
-CORS(app)
-
-model = YOLO("weight/lastv3.pt")
-
-# ---MongoDB setup---
-load_dotenv()
-db_url = os.getenv("MONGO_URL")
-mongo_client = MongoClient(db_url)
-db = mongo_client['search_image']
-collection = db['image_features']
-
 names = ['Tshirt', 'dress', 'jacket', 'pants', 'shirt', 'short', 'skirt', 'sweater']
 
 @app.route('/')
@@ -68,13 +67,18 @@ def predict():
     img = Image.open(BytesIO(image_file))  # Chuyển đổi ảnh thành đối tượng PIL
 
     # ---process image using YOLO model---
+    if img.width > 400:
+        new_height = int((400 / img.width) * img.height)
+        img = img.resize((400, new_height), Image.Resampling.LANCZOS)        
     results = model(img)  # Sử dụng YOLO model để xử lý ảnh
     img_features = extract_features(img, results[0].boxes.xyxy)
+
     cls_array = results[0].boxes.cls.numpy()
     tags = [names[int(idx)] for idx in cls_array]
     conditions = [{'tags': tag} for tag in tags]
-    query = {'$or': conditions}
+    query = {'$or': conditions} if conditions else {}
     db_imgs = list(collection.find(query))
+
     db_features_list = []
     for db_img in db_imgs:
         features = db_img.get('features', [])
@@ -85,6 +89,10 @@ def predict():
                 db_features_list.append(feature)
     img_features_array = np.array(img_features)
     db_features_array = np.array(db_features_list)
+    if img_features_array.size == 0: 
+        img_features_array = np.array([]).reshape(0, 2048)
+    if db_features_array.size == 0: 
+        db_features_array = np.array([]).reshape(0, 2048)
     distance_matrix = cdist(img_features_array, db_features_array, metric='euclidean')
 
     cnt = 0
@@ -139,5 +147,5 @@ def get_image(filename):
     return send_file(f'image/product_image/{filename}', mimetype='image/png')
 
 
-if __name__ == '__main__':
-    app.run(port=5000)
+if __name__ == '__main__': 
+    app.run(port=os.getenv('PORT'))
